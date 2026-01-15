@@ -4,6 +4,7 @@ import os
 import datetime
 import webuntis
 import pickle
+from functools import wraps
 TOKEN = os.getenv("UNTIS_BOT_TOKEN")
 TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID")
 UNTIS_ENABLED = os.getenv("UNTIS_ENABLED")
@@ -19,6 +20,17 @@ ADD_KLAUSUR = 1
 REMOVE_KLAUSUR = 2
 
 
+def restricted(func):
+    @wraps(func)
+    async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        user_id = update.effective_user.id
+        if str(user_id) != TELEGRAM_USER_ID:
+            # Optionally log or send a message
+            await update.message.reply_text("Du bist nicht autorisiert, diesen Bot zu benutzen.")
+            return
+        return await func(update, context, *args, **kwargs)
+    return wrapped
+
 def save_object(obj, filename):
     with open(filename, 'wb') as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
@@ -27,7 +39,7 @@ def load_object(filename):
     with open(filename, 'rb') as input:
         return pickle.load(input)
 
-
+@restricted
 async def manuell_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await entfallCheck(context, eigenerplan="ja")
 
@@ -78,8 +90,10 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
 
                             letzte_stunde = aktuelle_stunde
 
-                await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
+                if bot_text.endswith("</blockquote>\n\n"):
+                    await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
 
+@restricted
 async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teile = update.message.text.split('\n')
 
@@ -221,7 +235,7 @@ async def send_klausuren_errinerung(context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen.")
 
-
+@restricted
 async def Klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
@@ -233,6 +247,7 @@ async def Klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(text='Wähle eine Option:', reply_markup=reply_markup)
 
+@restricted
 async def entferne_klausur(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teile = update.message.text.split('\n')
     if len(teile) != 3:
@@ -279,7 +294,7 @@ def entferne_klausur_helper(fach, schulstunde, datum):
 
     return True
 
-
+@restricted
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
