@@ -5,16 +5,18 @@ import datetime
 import webuntis
 import pickle
 TOKEN = os.getenv("UNTIS_BOT_TOKEN")
-UNTIS_USER = os.getenv("UNTIS_USER")
-UNTIS_PASSWORD = os.getenv("UNTIS_PASSWORD")
-UNTIS_SCHOOL = os.getenv("UNTIS_SCHOOL")
-UNTIS_SERVER = os.getenv("UNTIS_SERVER")
-vertraetungstext = "eigenverantwortliches Arbeiten" #schulenabhängig anpassen
-TELEGRAM_NUTZER_ID = os.getenv("TELEGRAM_NUTZER_ID")
-gleicher_plan = ""
+TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID")
+UNTIS_ENABLED = os.getenv("UNTIS_ENABLED")
+if UNTIS_ENABLED == "true": 
+    UNTIS_USER = os.getenv("UNTIS_USER")
+    UNTIS_PASSWORD = os.getenv("UNTIS_PASSWORD")
+    UNTIS_SCHOOL = os.getenv("UNTIS_SCHOOL")
+    UNTIS_SERVER = os.getenv("UNTIS_SERVER")
+    vertraetungstext = "eigenverantwortliches Arbeiten" #schulenabhängig anpassen
+    gleicher_plan = ""
+    ADD_KLAUSUR = 1
+    REMOVE_KLAUSUR = 2
 
-ADD_KLAUSUR = 1
-REMOVE_KLAUSUR = 2
 
 def save_object(obj, filename):
     with open(filename, 'wb') as output:
@@ -60,7 +62,7 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                                         bot_text +=("\nEndzeit: " + str(period.end).split()[-1][:-3] + "</blockquote>\n\n")
                                         blockquote_offen = False
 
-                await context.bot.send_message(chat_id=TELEGRAM_NUTZER_ID, parse_mode="HTML", text=bot_text)
+                await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
 
 async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teile = update.message.text.split('\n')
@@ -181,27 +183,27 @@ async def send_klausuren_errinerung(context: ContextTypes.DEFAULT_TYPE):
 
     if erinnerungszeit == "30min":
         await context.bot.send_message(
-            chat_id=TELEGRAM_NUTZER_ID,
+            chat_id=TELEGRAM_USER_ID,
             text=f"Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {schulstundenzeit.strftime('%H:%M')}. Viel erfolg!"
         )
         entferne_klausur_helper(fach, schulstunde, datum_zeit)
     elif erinnerungszeit == "einTag":
         await context.bot.send_message(
-            chat_id=TELEGRAM_NUTZER_ID,
+            chat_id=TELEGRAM_USER_ID,
             text=f"Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
         )
     elif erinnerungszeit == "dreiTage":
         await context.bot.send_message(
-            chat_id=TELEGRAM_NUTZER_ID,
+            chat_id=TELEGRAM_USER_ID,
             text=f"Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
         )
     elif erinnerungszeit == "eineWoche":
         await context.bot.send_message(
-            chat_id=TELEGRAM_NUTZER_ID,
+            chat_id=TELEGRAM_USER_ID,
             text=f"Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
         )
     else:
-        await context.bot.send_message(chat_id=TELEGRAM_NUTZER_ID, text="Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen.")
+        await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen.")
 
 
 async def Klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -312,10 +314,12 @@ async def send_klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(TOKEN).build()
-    application.job_queue.run_repeating(entfallCheck, interval=900, first=0)
 
-    test_handler = CommandHandler('test', manuell_test)
-    application.add_handler(test_handler)
+    if UNTIS_ENABLED == "true": 
+        test_handler = CommandHandler('test', manuell_test)
+        application.add_handler(test_handler)
+
+        application.job_queue.run_repeating(entfallCheck, interval=900, first=0)
 
     klausuren_handler = CommandHandler('klausuren', Klausuren)
     application.add_handler(klausuren_handler)
