@@ -1,0 +1,16 @@
+services:
+  untis-telegram:
+    image:  ghcr.io/n0201/Python-Untis-Telegram-Bot_rewrite:main
+    container_name: untis-telegram
+    restart: unless-stopped
+    environment:
+      - UNTIS_BOT_TOKEN=
+      - TELEGRAM_USER_ID=
+      - UNTIS_ENABLED=
+      - UNTIS_USER=
+      - UNTIS_PASSWORD=
+      - UNTIS_SCHOOL=
+      - UNTIS_SERVER=
+      - UNTIS_VERTRAETUNGSTEXT=
+    volumes:
+      - ./data:/app/data

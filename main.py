@@ -12,7 +12,7 @@ if UNTIS_ENABLED == "true":
     UNTIS_PASSWORD = os.getenv("UNTIS_PASSWORD")
     UNTIS_SCHOOL = os.getenv("UNTIS_SCHOOL")
     UNTIS_SERVER = os.getenv("UNTIS_SERVER")
-    vertraetungstext = "eigenverantwortliches Arbeiten" #schulenabhängig anpassen
+    vertraetungstext = os.getenv("UNTIS_VERTRAETUNGSTEXT") #schulenabhängig anpassen
     gleicher_plan = ""
 
 ADD_KLAUSUR = 1
