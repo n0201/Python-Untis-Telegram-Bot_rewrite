@@ -8,6 +8,6 @@ COPY requirements.txt ./
 RUN apk add curl ca-certificates
 RUN pip install -r requirements.txt && rm requirements.txt
 
-COPY main.py ota pictures ./
+COPY main.py data ./
 
 CMD ["python3", "main.py"]
