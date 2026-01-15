@@ -14,8 +14,9 @@ if UNTIS_ENABLED == "true":
     UNTIS_SERVER = os.getenv("UNTIS_SERVER")
     vertraetungstext = "eigenverantwortliches Arbeiten" #schulenabhängig anpassen
     gleicher_plan = ""
-    ADD_KLAUSUR = 1
-    REMOVE_KLAUSUR = 2
+
+ADD_KLAUSUR = 1
+REMOVE_KLAUSUR = 2
 
 
 def save_object(obj, filename):
@@ -47,20 +48,35 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                 bot_text = "Der Unterricht entfällt für folgende Fächer:\n\n"
                 letzte_stunde = None
                 blockquote_offen = False
+
                 for time, row in table:
                     for date, cell in row:
-                            for period in cell:
-                                if letzte_stunde != (', '.join(su.long_name for su in period.subjects)):
-                                    letzte_stunde = (', '.join(su.long_name for su in period.subjects))
-                                    if period.substText == vertraetungstext:
-                                        bot_text += ("<blockquote>")
-                                        bot_text += (', '.join(su.long_name for su in period.subjects) + "   " + str(period.original_teachers[0]))
-                                        bot_text += ("\nStartzeit: " + str(period.start).split()[-1][:-3])
-                                        blockquote_offen = True
-                                else:
-                                    if blockquote_offen:
-                                        bot_text +=("\nEndzeit: " + str(period.end).split()[-1][:-3] + "</blockquote>\n\n")
-                                        blockquote_offen = False
+                        for period in cell:
+                            aktuelle_stunde = ', '.join(su.long_name for su in period.subjects)
+
+                            if blockquote_offen and aktuelle_stunde != letzte_stunde:
+                                bot_text += (
+                                    "\nEndzeit: "
+                                    + str(period.start).split()[-1][:-3]
+                                    + "</blockquote>\n\n"
+                                )
+                                blockquote_offen = False
+
+                            if period.substText == vertraetungstext:
+                                if not blockquote_offen:
+                                    bot_text += "<blockquote>"
+                                    bot_text += (
+                                        aktuelle_stunde
+                                        + "   "
+                                        + str(period.original_teachers[0])
+                                    )
+                                    bot_text += (
+                                        "\nStartzeit: "
+                                        + str(period.start).split()[-1][:-3]
+                                    )
+                                    blockquote_offen = True
+
+                            letzte_stunde = aktuelle_stunde
 
                 await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
 
@@ -179,7 +195,7 @@ async def send_klausuren_errinerung(context: ContextTypes.DEFAULT_TYPE):
     raum = data["raum"]
     erinnerungszeit = data["typ"]
     schulstundenzeit = data["schulstundenzeit"]
-    datum_zeit = datetime.datetime.strptime(data["datum_zeit"], "%d.%m.%Y")
+    datum_zeit = data["datum_zeit"]
 
     if erinnerungszeit == "30min":
         await context.bot.send_message(
@@ -309,11 +325,52 @@ async def send_klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot_text += f"<blockquote>Fach: {klausur[0]}\nDatum: {klausur[1].strftime('%d.%m.%Y')}\nSchulstunde: {klausur[2]}\nRaum: {klausur[4]}</blockquote>\n\n"
     await query.edit_message_text(bot_text, parse_mode="HTML")
 
+async def recover_klausuren_jobs(application):
+    try:
+        klausuren = load_object("klausuren.pkl")
+    except FileNotFoundError:
+        return
+    
+    now = datetime.datetime.now()
 
+    for fach, datum_zeit, schulstunde, schulstundenzeit, raum in klausuren:
+        start_dt = datetime.datetime(
+            datum_zeit.year,
+            datum_zeit.month,
+            datum_zeit.day,
+            schulstundenzeit.hour,
+            schulstundenzeit.minute
+        )
+
+        errinnerungen = [
+            ("30min", start_dt - datetime.timedelta(minutes=30)),
+            ("einTag", start_dt - datetime.timedelta(days=1)),
+            ("dreiTage", start_dt - datetime.timedelta(days=3)),
+            ("eineWoche", start_dt - datetime.timedelta(weeks=1)),
+        ]
+
+        for typ, when in errinnerungen:
+            if when >= now:
+                job_name = f"{fach}_{schulstunde}_{typ}"
+
+                if not application.job_queue.get_jobs_by_name(job_name):
+                    application.job_queue.run_once(
+                        send_klausuren_errinerung,
+                        when=when,
+                        data={
+                            "fach": fach,
+                            "schulstunde": schulstunde,
+                            "raum": raum,
+                            "typ": typ,
+                            "schulstundenzeit": schulstundenzeit,
+                            "datum_zeit": datum_zeit,
+                        },
+                        name=job_name
+                    )
 
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(TOKEN).build()
+    application = ApplicationBuilder().token(TOKEN).post_init(recover_klausuren_jobs).build()
 
     if UNTIS_ENABLED == "true": 
         test_handler = CommandHandler('test', manuell_test)
