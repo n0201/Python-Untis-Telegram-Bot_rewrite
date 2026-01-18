@@ -5,9 +5,12 @@ import datetime
 import webuntis
 import pickle
 from functools import wraps
+import gettext
+import asyncio
 TOKEN = os.getenv("UNTIS_BOT_TOKEN")
 TELEGRAM_USER_ID = os.getenv("TELEGRAM_USER_ID")
 UNTIS_ENABLED = os.getenv("UNTIS_ENABLED")
+UNTIS_LANGUAGE = os.getenv("UNTIS_LANGUAGE")
 if UNTIS_ENABLED == "true": 
     UNTIS_USER = os.getenv("UNTIS_USER")
     UNTIS_PASSWORD = os.getenv("UNTIS_PASSWORD")
@@ -16,8 +19,25 @@ if UNTIS_ENABLED == "true":
     vertraetungstext = os.getenv("UNTIS_VERTRAETUNGSTEXT") #schulenabhängig anpassen
     gleicher_plan = ""
 
+klausuren_lock = asyncio.Lock()
+
+locale_dir = "./locale"
+gettext.bindtextdomain("main", locale_dir)
+gettext.textdomain("main")
+
+if UNTIS_LANGUAGE == "en":
+    try:
+        lang = gettext.translation("main", localedir=locale_dir, languages=["en"])
+        lang.install()
+        _ = lang.gettext
+    except (FileNotFoundError, OSError):
+        _ = lambda s: s
+else:
+    _ = lambda s: s
+
 ADD_KLAUSUR = 1
 REMOVE_KLAUSUR = 2
+WAITING_FOR_CHOICE = 3
 
 
 def restricted(func):
@@ -26,18 +46,20 @@ def restricted(func):
         user_id = update.effective_user.id
         if str(user_id) != TELEGRAM_USER_ID:
             # Optionally log or send a message
-            await update.message.reply_text("Du bist nicht autorisiert, diesen Bot zu benutzen.")
+            await update.message.reply_text(_("Du bist nicht autorisiert, diesen Bot zu benutzen."))
             return
         return await func(update, context, *args, **kwargs)
     return wrapped
 
-def save_object(obj, filename):
-    with open(f"data/{filename}", 'wb') as output:
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+async def save_object(obj, filename):
+    async with klausuren_lock:
+        with open(f"data/{filename}", "wb") as output:
+            pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
-def load_object(filename):
-    with open(f"data/{filename}", 'rb') as input:
-        return pickle.load(input)
+async def load_object(filename):
+    async with klausuren_lock:
+        with open(f"data/{filename}", "rb") as input:
+            return pickle.load(input)
 
 @restricted
 async def manuell_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -57,7 +79,7 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
             table = s.my_timetable(start=today, end=today).to_table()
             if table != gleicher_plan or eigenerplan=="ja":
                 gleicher_plan = table    
-                bot_text = "Der Unterricht entfällt für folgende Fächer:\n\n"
+                bot_text = _("Der Unterricht entfällt für folgende Fächer:\n\n")
                 letzte_stunde = None
                 blockquote_offen = False
 
@@ -80,7 +102,6 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                                     bot_text += (
                                         aktuelle_stunde
                                         + "   "
-                                        + str(period.original_teachers[0])
                                     )
                                     bot_text += (
                                         "\nStartzeit: "
@@ -93,14 +114,14 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                 if bot_text.endswith("</blockquote>\n\n"):
                     await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
                 elif eigenerplan=="ja":
-                    await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="Heute fällt kein Unterricht aus.")
+                    await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Heute fällt kein Unterricht aus."))
 
 @restricted
 async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teile = update.message.text.split('\n')
 
     if len(teile) != 4:
-        await update.message.reply_text(text="Format faösch. 4 Zeilen erwartet.")
+        await update.message.reply_text(text=_("Format falsch. 4 Zeilen erwartet."))
         return ADD_KLAUSUR
     
     fach, datum, schulstunde, raum = teile
@@ -111,20 +132,20 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
         if schulstunde < 1 or schulstunde > 10:
             raise ValueError
     except ValueError:
-        await update.message.reply_text(text="Datum oder Schulstunde ungültig!")
+        await update.message.reply_text(text=_("Datum oder Schulstunde ungültig!"))
         return ADD_KLAUSUR
     
     try:
-        klausuren = load_object("klausuren.pkl")
-    except:
+        klausuren = await load_object("klausuren.pkl")
+    except FileNotFoundError:
         klausuren = []
     schulstunden = {1: "08:00", 2: "08:45", 3: "09:50", 4: "10:40", 5: "11:45", 6: "12:35", 7: "13:50", 8: "14:40", 9: "15:30", 10: "16:15"}
     schulstundenzeit = datetime.datetime.strptime(schulstunden[schulstunde], "%H:%M")
     klausuren.append([fach, datum_zeit, schulstunde, schulstundenzeit, raum])
-    save_object(klausuren, "klausuren.pkl")
-
-    await update.message.reply_text(text=f"Klausur in {fach} am {datum} während der {schulstunde} in Raum {raum} wurde hinzugefügt.")
-    application.job_queue.run_once(
+    await save_object(klausuren, "klausuren.pkl")
+    
+    await update.message.reply_text(text=_("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde in Raum {raum} wurde hinzugefügt.").format(fach=fach, datum=datum, schulstunde=schulstunde, raum=raum))
+    context.application.job_queue.run_once(
         send_klausuren_errinerung,
         when=datetime.datetime(
             datum_zeit.year,
@@ -143,7 +164,7 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
         },
         name=f"{fach}_{schulstunde}_30min"
     )
-    application.job_queue.run_once(
+    context.application.job_queue.run_once(
         send_klausuren_errinerung,
         when=datetime.datetime(
             datum_zeit.year,
@@ -162,7 +183,7 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
         },
         name=f"{fach}_{schulstunde}_einTag"
     )
-    application.job_queue.run_once(
+    context.application.job_queue.run_once(
         send_klausuren_errinerung,
         when=datetime.datetime(
             datum_zeit.year,
@@ -181,7 +202,7 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
         },
         name=f"{fach}_{schulstunde}_dreiTage"
     )
-    application.job_queue.run_once(
+    context.application.job_queue.run_once(
         send_klausuren_errinerung,
         when=datetime.datetime(
             datum_zeit.year,
@@ -216,44 +237,45 @@ async def send_klausuren_errinerung(context: ContextTypes.DEFAULT_TYPE):
     if erinnerungszeit == "30min":
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=f"Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {schulstundenzeit.strftime('%H:%M')}. Viel erfolg!"
+            text=_("Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {schulstundenzeit}. Viel erfolg!").format(fach=fach, raum=raum, schulstundenzeit=schulstundenzeit.strftime('%H:%M'))
         )
-        entferne_klausur_helper(fach, schulstunde, datum_zeit)
+        await entferne_klausur_helper(fach, schulstunde, datum_zeit, context)
     elif erinnerungszeit == "einTag":
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=f"Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
+            text=_("Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     elif erinnerungszeit == "dreiTage":
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=f"Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
+            text=_("Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     elif erinnerungszeit == "eineWoche":
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=f"Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}."
+            text=_("Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     else:
-        await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen.")
+        await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen."))
 
 @restricted
 async def Klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
-            InlineKeyboardButton("Klausuren anzeigen", callback_data="send: klausuren"),
-            InlineKeyboardButton("Klausur hinzufügen", callback_data="add: klausur"),
-            InlineKeyboardButton("Klausur entfernen", callback_data="remove: klausur"),
+            InlineKeyboardButton(_("Klausuren anzeigen"), callback_data="send: klausuren"),
+            InlineKeyboardButton(_("Klausur hinzufügen"), callback_data="add: klausur"),
+            InlineKeyboardButton(_("Klausur entfernen"), callback_data="remove: klausur"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(text='Wähle eine Option:', reply_markup=reply_markup)
+    await update.message.reply_text(text=_('Wähle eine Option:'), reply_markup=reply_markup)
+    return WAITING_FOR_CHOICE
 
 @restricted
 async def entferne_klausur(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teile = update.message.text.split('\n')
     if len(teile) != 3:
-        await update.message.reply_text(text="Format falsch. 3 Zeilen erwartet.")
+        await update.message.reply_text(text=_("Format falsch. 3 Zeilen erwartet."))
         return REMOVE_KLAUSUR
     
     fach, datum, schulstunde = teile
@@ -262,37 +284,38 @@ async def entferne_klausur(update: Update, context: ContextTypes.DEFAULT_TYPE):
         datum_zeit = datetime.datetime.strptime(datum, "%d.%m.%Y")
         schulstunde = int(schulstunde)
     except ValueError:
-        await update.message.reply_text(text="Datum oder Schulstunde ungültig!")
+        await update.message.reply_text(text=_("Datum oder Schulstunde ungültig!"))
         return REMOVE_KLAUSUR
 
-    if entferne_klausur_helper(fach, schulstunde, datum_zeit):
-        await update.message.reply_text(text=f"Klausur in {fach} am {datum} während der {schulstunde} wurde entfernt.")
+    if await entferne_klausur_helper(fach, schulstunde, datum_zeit, context):
+        await update.message.reply_text(text=_("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde wurde entfernt.").format(fach=fach, datum=datum, schulstunde=schulstunde))
     else:
-        await update.message.reply_text(text="Klausur nicht gefunden.")
+        await update.message.reply_text(text=_("Klausur nicht gefunden."))
 
     return ConversationHandler.END
 
-def entferne_klausur_helper(fach, schulstunde, datum):
+async def entferne_klausur_helper(fach, schulstunde, datum, context=None):
     try:
-        klausuren = load_object("klausuren.pkl")
-    except:
+        klausuren = await load_object("klausuren.pkl")
+    except FileNotFoundError:
         return False
 
     original_len = len(klausuren)
 
     klausuren = [
         k for k in klausuren
-        if not (k[0] == fach and k[2] == schulstunde and k[1].date() == datum.date())
+        if not (k[0] == fach and k[2] == int(schulstunde) and k[1].date() == datum.date())
     ]
 
     if len(klausuren) == original_len:
         return False
 
-    save_object(klausuren, "klausuren.pkl")
+    await save_object(klausuren, "klausuren.pkl")
 
-    for zeit in ["30min", "einTag", "dreiTage", "eineWoche"]:
-        for job in application.job_queue.get_jobs_by_name(f"{fach}_{schulstunde}_{zeit}"):
-            job.schedule_removal()
+    if context and context.application:
+        for zeit in ["30min", "einTag", "dreiTage", "eineWoche"]:
+            for job in context.application.job_queue.get_jobs_by_name(f"{fach}_{schulstunde}_{zeit}"):
+                job.schedule_removal()
 
     return True
 
@@ -301,26 +324,29 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    await query.message.edit_reply_markup(None)
+
     if query.data == "add: klausur":
         await query.message.edit_text(
-            "Format:\n\n"
-            "Fach\n"
-            "Datum (TT.MM.JJJJ)\n"
-            "Schulstunde\n"
-            "Raum"
+            _("Format:\n\n")
+            + _("Fach\n")
+            + _("Datum (TT.MM.JJJJ)\n")
+            + _("Schulstunde\n")
+            + _("Raum")
         )
         return ADD_KLAUSUR
 
     if query.data == "remove: klausur":
         await query.message.edit_text(
-            "Format:\n\n"
-            "Fach\n"
-            "Datum (TT.MM.JJJJ)\n"
-            "Schulstunde"
+            _("Format:\n\n")
+            + _("Fach\n")
+            + _("Datum (TT.MM.JJJJ)\n")
+            + _("Schulstunde")
         )
         return REMOVE_KLAUSUR
     elif query.data == "send: klausuren":
         await send_klausuren(update, context)
+        return ConversationHandler.END
 
     return ConversationHandler.END
 
@@ -331,20 +357,28 @@ async def send_klausuren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     try:
-        Klausuren = load_object("klausuren.pkl")
+        Klausuren = await load_object("klausuren.pkl")
     except FileNotFoundError:
         Klausuren = []
     if not Klausuren:
-        await query.edit_message_text("Keine Klausuren gefunden.")
+        await query.edit_message_text(_("Keine Klausuren gefunden."))
         return
-    bot_text = "Deine Klausuren:\n\n"
+    bot_text = _("Deine Klausuren:\n\n")
     for klausur in Klausuren:
-        bot_text += f"<blockquote>Fach: {klausur[0]}\nDatum: {klausur[1].strftime('%d.%m.%Y')}\nSchulstunde: {klausur[2]}\nRaum: {klausur[4]}</blockquote>\n\n"
+        bot_text += (
+            f"<blockquote>"
+            f"{_('Fach')}: {klausur[0]}\n"
+            f"{_('Datum')}: {klausur[1].strftime('%d.%m.%Y')}\n"
+            f"{_('Schulstunde')}: {klausur[2]}\n"
+            f"{_('Raum')}: {klausur[4]}"
+            f"</blockquote>\n\n"
+        )
+
     await query.edit_message_text(bot_text, parse_mode="HTML")
 
 async def recover_klausuren_jobs(application):
     try:
-        klausuren = load_object("klausuren.pkl")
+        klausuren = await load_object("klausuren.pkl")
     except FileNotFoundError:
         return
     
@@ -387,6 +421,9 @@ async def recover_klausuren_jobs(application):
 
 
 if __name__ == '__main__':
+    # Ensure data directory exists
+    os.makedirs("data", exist_ok=True)
+    
     application = ApplicationBuilder().token(TOKEN).post_init(recover_klausuren_jobs).build()
 
     if UNTIS_ENABLED == "true": 
@@ -395,12 +432,14 @@ if __name__ == '__main__':
 
         application.job_queue.run_repeating(entfallCheck, interval=900, first=0)
 
-    klausuren_handler = CommandHandler('klausuren', Klausuren)
-    application.add_handler(klausuren_handler)
-
     conv_handler = ConversationHandler(
-    entry_points=[CallbackQueryHandler(button_callback)],
+    entry_points=[
+        CommandHandler(_('klausuren'), Klausuren),
+    ],
     states={
+        WAITING_FOR_CHOICE: [
+            CallbackQueryHandler(button_callback)
+        ],
         ADD_KLAUSUR: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, Klausur_Hinzufuegen)
         ],
@@ -408,7 +447,7 @@ if __name__ == '__main__':
             MessageHandler(filters.TEXT & ~filters.COMMAND, entferne_klausur)
         ],
     },
-    fallbacks=[],
+    fallbacks=[CommandHandler(_('klausuren'), Klausuren)],
     per_user=True,
     )
 

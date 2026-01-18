@@ -12,5 +12,6 @@ services:
       - UNTIS_SCHOOL=
       - UNTIS_SERVER=
       - UNTIS_VERTRAETUNGSTEXT=
+      - UNTIS_LOCALE=en
     volumes:
       - ./data:/app/data

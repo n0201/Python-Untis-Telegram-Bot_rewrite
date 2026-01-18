@@ -9,5 +9,6 @@ RUN apk add curl ca-certificates
 RUN pip install -r requirements.txt && rm requirements.txt
 
 COPY main.py data ./
+COPY locale ./locale
 
 CMD ["python3", "main.py"]
