@@ -1,0 +1,92 @@
+# English translation for main
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+
+msgid "Du bist nicht autorisiert, diesen Bot zu benutzen."
+msgstr "You are not authorized to use this bot."
+
+msgid "Der Unterricht entfällt für folgende Fächer:\n\n"
+msgstr "The classes are cancelled for the following subjects:\n\n"
+
+msgid "Heute fällt kein Unterricht aus."
+msgstr "No classes cancelled today."
+
+msgid "Format falsch. 4 Zeilen erwartet."
+msgstr "Format incorrect. 4 lines expected."
+
+msgid "Datum oder Schulstunde ungültig!"
+msgstr "Date or period invalid"
+
+msgid "Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde in Raum {raum} wurde hinzugefügt."
+msgstr "Exam in {fach} on the {datum} while {schulstunde}th period in room {raum} was added."
+
+msgid "Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {zeit}. Viel erfolg!"
+msgstr "Reminder: you got an exam in {fach} in room {raum} at {zeit} in 30 minutes. Good luck!"
+
+msgid "Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde."
+msgstr "Reminder: Tomorrow, you got an exam in {fach} in room {raum} while the {schulstunde}th period."
+
+msgid "Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde."
+msgstr "Reminder: In 3 days, you got an exam in {fach} in room {raum} while the {schulstunde}th period."
+
+msgid "Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde."
+msgstr "Reminder: In one week, you got an exam in {fach} in room {raum} while the {schulstunde}th period."
+
+msgid "Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen."
+msgstr "Issue while reminding. You should check your exam appointment."
+
+msgid "Klausuren anzeigen"
+msgstr "Show exams"
+
+msgid "Klausur hinzufügen"
+msgstr "Add exam"
+
+msgid "Klausur entfernen"
+msgstr "Remove exam"
+
+msgid "Wähle eine Option:"
+msgstr "choose an option"
+
+msgid "Format falsch. 3 Zeilen erwartet."
+msgstr "incorrect format. 3 lines expected."
+
+msgid "Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde wurde entfernt."
+msgstr "Exam in {fach} on the {} at the {schulstunde}th Period was removed."
+
+msgid "Klausur nicht gefunden."
+msgstr "Exam not found."
+
+msgid "Format:\n\n"
+msgstr "Format:\n\n"
+
+msgid "Fach\n"
+msgstr "Class\n"
+
+msgid "Datum (TT.MM.JJJJ)\n"
+msgstr "Date (DD.MM.JJJJ)\n"
+
+msgid "Schulstunde\n"
+msgstr "Period\n"
+
+msgid "Raum"
+msgstr "Room"
+
+msgid "Schulstunde"
+msgstr "Period"
+
+msgid "Keine Klausuren gefunden."
+msgstr "No exams found."
+
+msgid "Fach"
+msgstr "Class"
+
+msgid "Datum"
+msgstr "Date"
+
+msgid "Deine Klausuren:\n\n"
+msgstr "Your exams:\n\n"
+
+msgid "klausuren"
+msgstr "exams"
