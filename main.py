@@ -92,6 +92,8 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
 
                 if bot_text.endswith("</blockquote>\n\n"):
                     await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
+                elif eigenerplan=="ja":
+                    await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="Heute fällt kein Unterricht aus.")
 
 @restricted
 async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE):
