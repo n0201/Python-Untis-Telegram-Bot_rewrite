@@ -14,6 +14,7 @@
 ## Commands
 - /start - Sends a help message with info for the exam (and if untis is enabled, also for the test) command.
 - /exams - Sends a message with 3 options to choose from to manage your exams.
+- /klausuren - The same as /exams, but /exams will be changed to this if the bot is set to German.
 
 ## How to use exams
 - follow the exact same structure it asks for that means following:
