@@ -419,12 +419,29 @@ async def recover_klausuren_jobs(application):
                         name=job_name
                     )
 
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = _(
+        _("Willkommen zum Untis Bot!\n\n")+
+        _("Verfügbare Befehle:\n")+
+        _("/start - Zeigt diese Hilfemeldung an\n")
+    )
+    if UNTIS_ENABLED == "true": 
+        help_text += _(
+            _("/test - Führt einen manuellen Test auf Unterrichtsausfälle durch\n")
+        )
+    help_text += _(
+        _("/klausuren - Verwalte deine Klausuren (hinzufügen, entfernen, anzeigen)\n")
+    )
+    await update.message.reply_text(help_text)
 
 if __name__ == '__main__':
     # Ensure data directory exists
     os.makedirs("data", exist_ok=True)
     
     application = ApplicationBuilder().token(TOKEN).post_init(recover_klausuren_jobs).build()
+
+    start_handler = CommandHandler('start', help)
+    application.add_handler(start_handler)
 
     if UNTIS_ENABLED == "true": 
         test_handler = CommandHandler('test', manuell_test)

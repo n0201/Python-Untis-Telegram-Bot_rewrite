@@ -90,3 +90,18 @@ msgstr "Your exams:\n\n"
 
 msgid "klausuren"
 msgstr "exams"
+
+msgid "Willkommen zum Untis Bot!\n\n"
+msgstr "Welcome to the Untis bot!\n\n"
+
+msgid "Verfügbare Befehle:\n"
+msgstr "Available commands:\n"
+
+msgid "/start - Zeigt diese Hilfemeldung an\n"
+msgstr "/start - shows this help message\n"
+
+msgid "/test - Führt einen manuellen Test auf Unterrichtsausfälle durch\n"
+msgstr "/test - does a manual check for cancelled classes\n"
+
+msgid "/klausuren - Verwalte deine Klausuren (hinzufügen, entfernen, anzeigen)\n"
+msgstr "/exams - manage your exams (add, remove, show)\n"
