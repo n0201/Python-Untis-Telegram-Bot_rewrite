@@ -53,7 +53,7 @@ msgid "Format falsch. 3 Zeilen erwartet."
 msgstr "incorrect format. 3 lines expected."
 
 msgid "Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde wurde entfernt."
-msgstr "Exam in {fach} on the {} at the {schulstunde}th Period was removed."
+msgstr "Exam in {fach} on the {datum} at the {schulstunde}th Period was removed."
 
 msgid "Klausur nicht gefunden."
 msgstr "Exam not found."

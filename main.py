@@ -126,6 +126,11 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     fach, datum, schulstunde, raum = teile
 
+    fach = fach.strip()
+    datum = datum.strip()
+    schulstunde = schulstunde.strip()
+    raum = raum.strip()
+
     try:
         datum_zeit = datetime.datetime.strptime(datum, "%d.%m.%Y")
         schulstunde = int(schulstunde)
@@ -144,7 +149,8 @@ async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE
     klausuren.append([fach, datum_zeit, schulstunde, schulstundenzeit, raum])
     await save_object(klausuren, "klausuren.pkl")
     
-    await update.message.reply_text(text=_("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde in Raum {raum} wurde hinzugefügt.").format(fach=fach, datum=datum, schulstunde=schulstunde, raum=raum))
+    message = _("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde in Raum {raum} wurde hinzugefügt.")
+    await update.message.reply_text(text=message.format(fach=fach, datum=datum, schulstunde=schulstunde, raum=raum))
     context.application.job_queue.run_once(
         send_klausuren_errinerung,
         when=datetime.datetime(
@@ -235,25 +241,29 @@ async def send_klausuren_errinerung(context: ContextTypes.DEFAULT_TYPE):
     datum_zeit = data["datum_zeit"]
 
     if erinnerungszeit == "30min":
+        message = _("Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {schulstundenzeit}. Viel erfolg!")
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=_("Erinnerung: In 30 Minuten hast du eine Klausur in {fach} in Raum {raum} um {schulstundenzeit}. Viel erfolg!").format(fach=fach, raum=raum, schulstundenzeit=schulstundenzeit.strftime('%H:%M'))
+            text=message.format(fach=fach, raum=raum, schulstundenzeit=schulstundenzeit)
         )
         await entferne_klausur_helper(fach, schulstunde, datum_zeit, context)
     elif erinnerungszeit == "einTag":
+        message = _("Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.")
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=_("Erinnerung: Morgen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
+            text=message.format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     elif erinnerungszeit == "dreiTage":
+        message = _("Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.")
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=_("Erinnerung: in drei Tagen hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
+            text=message.format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     elif erinnerungszeit == "eineWoche":
+        message = _("Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.")
         await context.bot.send_message(
             chat_id=TELEGRAM_USER_ID,
-            text=_("Erinnerung: In einer Woche hast du eine Klausur in {fach} in Raum {raum} während der {schulstunde}. Schulstunde.").format(fach=fach, raum=raum, schulstunde=schulstunde)
+            text=message.format(fach=fach, raum=raum, schulstunde=schulstunde)
         )
     else:
         await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Fehler beim Erinnern. Du solltest deine Klausurtermine überprüfen."))
@@ -279,6 +289,10 @@ async def entferne_klausur(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return REMOVE_KLAUSUR
     
     fach, datum, schulstunde = teile
+
+    fach = fach.strip()
+    datum = datum.strip()
+    schulstunde = schulstunde.strip()
     
     try:
         datum_zeit = datetime.datetime.strptime(datum, "%d.%m.%Y")
@@ -288,13 +302,15 @@ async def entferne_klausur(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return REMOVE_KLAUSUR
 
     if await entferne_klausur_helper(fach, schulstunde, datum_zeit, context):
-        await update.message.reply_text(text=_("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde wurde entfernt.").format(fach=fach, datum=datum, schulstunde=schulstunde))
+        message = _("Klausur in {fach} am {datum} während der {schulstunde}. Schulstunde wurde entfernt.")
+        await update.message.reply_text(text=message.format(fach=fach, datum=datum, schulstunde=schulstunde))
     else:
         await update.message.reply_text(text=_("Klausur nicht gefunden."))
 
     return ConversationHandler.END
 
 async def entferne_klausur_helper(fach, schulstunde, datum, context=None):
+
     try:
         klausuren = await load_object("klausuren.pkl")
     except FileNotFoundError:
