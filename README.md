@@ -15,6 +15,17 @@
 - /start - Sends a help message with info for the exam (and if untis is enabled, also for the test) command.
 - /exams - Sends a message with 3 options to choose from to manage your exams.
 
+## How to use exams
+- follow the exact same structure it asks for that means following:
+  - do line breaks like the bot does
+  - put everything in the right order
+
+### Example:
+Maths
+22.12.2026
+3
+2026
+
 ## Setup
 The bot loads all info that has to be provided from the environment. This is why it is highly recommended to use the bot with its docker image.
 
