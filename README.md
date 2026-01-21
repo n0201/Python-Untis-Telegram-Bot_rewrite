@@ -11,6 +11,10 @@
 ### 3. One instance per user
 - to ensure full user safety and privacy, this bot only allows ONE user to use it per instance. The owner of the bot instance should provide his Telegram token (and Untis login if enabled)
 
+## Commands
+- /start - Sends a help message with info for the exam (and if untis is enabled, also for the test) command.
+- /exams - Sends a message with 3 options to choose from to manage your exams.
+
 ## Setup
 The bot loads all info that has to be provided from the environment. This is why it is highly recommended to use the bot with its docker image.
 
@@ -24,9 +28,11 @@ If you don't want to use Untis functionality, leave all the untis vars blank exc
   First install required pip packages: `pip install -r requirements.txt`
   
   ### Then run the bot
-  with untis enabled: `UNTIS_BOT_TOKEN=<your telegram bot token> TELEGRAM_USER_ID=<your telegram id> UNTIS_ENABLED=true UNTIS_USER=<your Untis username> UNTIS_PASSWORD=<your Untis password> UNTIS_SCHOOL=<your school name> UNTIS_SERVER=<the domain of the untis page> UNTIS_VERTRAETUNGSTEXT=<the subsitude text getting used if a lesson gets cancelled> python3 main.py`
+  remove UNTIS_LANGUAGE from both if you want the bot to be in German.
 
-  with untis disabled: `UNTIS_BOT_TOKEN=<your telegram bot token> TELEGRAM_USER_ID=<your telegram id> python3 main.py`
+  with untis enabled: `UNTIS_LANGUAGE="en" UNTIS_BOT_TOKEN=<your telegram bot token> TELEGRAM_USER_ID=<your telegram id> UNTIS_ENABLED=true UNTIS_USER=<your Untis username> UNTIS_PASSWORD=<your Untis password> UNTIS_SCHOOL=<your school name> UNTIS_SERVER=<the domain of the untis page> UNTIS_VERTRAETUNGSTEXT=<the subsitude text getting used if a lesson gets cancelled> python3 main.py`
+
+  with untis disabled: `UNTIS_BOT_TOKEN=<your telegram bot token> UNTIS_LANGUAGE="en" TELEGRAM_USER_ID=<your telegram id> python3 main.py`
 </details>
 
 <details>
