@@ -27,6 +27,9 @@ Maths
 3
 2026
 
+## Note
+If you're trying out the Test bot available on flavortown, You'll need to pm it. Exam functionality is very limited in groups!
+
 ## Setup
 The bot loads all info that has to be provided from the environment. This is why it is highly recommended to use the bot with its docker image.
 
