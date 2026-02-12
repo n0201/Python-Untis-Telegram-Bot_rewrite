@@ -111,6 +111,14 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
 
                             letzte_stunde = aktuelle_stunde
 
+                # Close any remaining open blockquote
+                if blockquote_offen:
+                    bot_text += (
+                        "\nEndzeit: "
+                        + str(period.start).split()[-1][:-3]
+                        + "</blockquote>\n\n"
+                    )
+
                 if bot_text.endswith("</blockquote>\n\n"):
                     await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
                 elif eigenerplan=="ja":
