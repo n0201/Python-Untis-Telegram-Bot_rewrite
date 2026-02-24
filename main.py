@@ -63,9 +63,18 @@ async def load_object(filename):
 
 @restricted
 async def manuell_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton(_("Entfall heute"), callback_data="send: entfall_heute"),
+            InlineKeyboardButton(_("Entfall morgen"), callback_data="send: entfall_morgen"),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text=_('Wähle eine Option:'), reply_markup=reply_markup)
+    return WAITING_FOR_CHOICE
     await entfallCheck(context, eigenerplan="ja")
 
-async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
+async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None, morgen=False):
         global gleicher_plan
         global vertraetungstext
         with webuntis.Session(
@@ -75,8 +84,11 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
             school = UNTIS_SCHOOL,
             useragent='WebUntis Python Client'
         ).login() as s:
-            today = datetime.date.today()
-            table = s.my_timetable(start=today, end=today).to_table()
+            if morgen:
+                timeframe = datetime.datetime.now() + datetime.timedelta(days=1)
+            else:
+                timeframe = datetime.datetime.now()
+            table = s.my_timetable(start=timeframe, end=timeframe).to_table()
             if table != gleicher_plan or eigenerplan=="ja":
                 gleicher_plan = table    
                 bot_text = _("Der Unterricht entfällt für folgende Fächer:\n\n")
@@ -373,7 +385,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ADD_KLAUSUR
 
-    if query.data == "remove: klausur":
+    elif query.data == "remove: klausur":
         await query.message.edit_text(
             _("Format:\n\n")
             + _("Fach\n")
@@ -384,6 +396,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "send: klausuren":
         await send_klausuren(update, context)
         return ConversationHandler.END
+    
+    elif query.data == "send: entfall_heute":
+        await entfallCheck(context, eigenerplan="ja")
+    
+    elif query.data == "send: entfall_morgen":
+        await entfallCheck(context, eigenerplan="ja", morgen=True)
+
 
     return ConversationHandler.END
 
