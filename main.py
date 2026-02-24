@@ -398,11 +398,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     elif query.data == "send: entfall_heute":
-        await entfallCheck(context, eigenerplan="ja")
+        await entfallCheck(context, eigenerplan="ja", morgen=False)
+        return ConversationHandler.END
     
     elif query.data == "send: entfall_morgen":
         await entfallCheck(context, eigenerplan="ja", morgen=True)
-
+        return ConversationHandler.END
 
     return ConversationHandler.END
 
