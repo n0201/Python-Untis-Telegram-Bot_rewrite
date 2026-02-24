@@ -94,21 +94,25 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None, mor
                 bot_text = _("Der Unterricht entfällt für folgende Fächer:\n\n")
                 letzte_stunde = None
                 blockquote_offen = False
+                start_zeit = None
+                end_zeit = None
 
                 for time, row in table:
                     for date, cell in row:
                         for period in cell:
                             aktuelle_stunde = ', '.join(su.long_name for su in period.subjects)
 
-                            if blockquote_offen and aktuelle_stunde != letzte_stunde:
-                                bot_text += (
-                                    "\nEndzeit: "
-                                    + str(period.end).split()[-1][:-3]
-                                    + "</blockquote>\n\n"
-                                )
-                                blockquote_offen = False
-
                             if period.substText == vertraetungstext:
+                                # If blockquote is open and subject changed, close it first
+                                if blockquote_offen and aktuelle_stunde != letzte_stunde:
+                                    bot_text += (
+                                        "\nEndzeit: "
+                                        + str(end_zeit).split()[-1][:-3]
+                                        + "</blockquote>\n\n"
+                                    )
+                                    blockquote_offen = False
+
+                                # If no blockquote is open, open a new one
                                 if not blockquote_offen:
                                     bot_text += "<blockquote>"
                                     bot_text += (
@@ -120,27 +124,27 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None, mor
                                         + str(period.start).split()[-1][:-3]
                                     )
                                     blockquote_offen = True
+                                    start_zeit = period.start
                                 
-                                if blockquote_offen and aktuelle_stunde != letzte_stunde:
-                                    bot_text += "</blockquote>\n\n"
-                                    bot_text += "<blockquote>"
+                                # Update end time for consecutive periods with same subject
+                                end_zeit = period.end
+                                letzte_stunde = aktuelle_stunde
+                            else:
+                                # Close blockquote if we hit a non-cancelled period
+                                if blockquote_offen:
                                     bot_text += (
-                                        aktuelle_stunde
-                                        + "   "
+                                        "\nEndzeit: "
+                                        + str(end_zeit).split()[-1][:-3]
+                                        + "</blockquote>\n\n"
                                     )
-                                    bot_text += (
-                                        "\nStartzeit: "
-                                        + str(period.start).split()[-1][:-3]
-                                    )
-                                    blockquote_offen = True
-
-                            letzte_stunde = aktuelle_stunde
+                                    blockquote_offen = False
+                                    letzte_stunde = None
 
                 # Close any remaining open blockquote
                 if blockquote_offen:
                     bot_text += (
                         "\nEndzeit: "
-                        + str(period.end).split()[-1][:-3]
+                        + str(end_zeit).split()[-1][:-3]
                         + "</blockquote>\n\n"
                     )
 
