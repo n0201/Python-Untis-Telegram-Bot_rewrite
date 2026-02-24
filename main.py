@@ -91,13 +91,26 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                             if blockquote_offen and aktuelle_stunde != letzte_stunde:
                                 bot_text += (
                                     "\nEndzeit: "
-                                    + str(period.start).split()[-1][:-3]
+                                    + str(period.end).split()[-1][:-3]
                                     + "</blockquote>\n\n"
                                 )
                                 blockquote_offen = False
 
                             if period.substText == vertraetungstext:
                                 if not blockquote_offen:
+                                    bot_text += "<blockquote>"
+                                    bot_text += (
+                                        aktuelle_stunde
+                                        + "   "
+                                    )
+                                    bot_text += (
+                                        "\nStartzeit: "
+                                        + str(period.start).split()[-1][:-3]
+                                    )
+                                    blockquote_offen = True
+                                
+                                if blockquote_offen and aktuelle_stunde != letzte_stunde:
+                                    bot_text += "</blockquote>\n\n"
                                     bot_text += "<blockquote>"
                                     bot_text += (
                                         aktuelle_stunde
@@ -115,7 +128,7 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None):
                 if blockquote_offen:
                     bot_text += (
                         "\nEndzeit: "
-                        + str(period.start).split()[-1][:-3]
+                        + str(period.end).split()[-1][:-3]
                         + "</blockquote>\n\n"
                     )
 
