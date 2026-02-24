@@ -85,9 +85,9 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None, mor
             useragent='WebUntis Python Client'
         ).login() as s:
             if morgen:
-                timeframe = datetime.datetime.now() + datetime.timedelta(days=1)
+                timeframe = (datetime.datetime.now() + datetime.timedelta(days=1)).date()
             else:
-                timeframe = datetime.datetime.now()
+                timeframe = datetime.datetime.now().date()
             table = s.my_timetable(start=timeframe, end=timeframe).to_table()
             if table != gleicher_plan or eigenerplan=="ja":
                 gleicher_plan = table    
@@ -147,7 +147,10 @@ async def entfallCheck(context: ContextTypes.DEFAULT_TYPE, eigenerplan=None, mor
                 if bot_text.endswith("</blockquote>\n\n"):
                     await context.bot.send_message(chat_id=TELEGRAM_USER_ID, parse_mode="HTML", text=bot_text)
                 elif eigenerplan=="ja":
-                    await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Heute fällt kein Unterricht aus."))
+                    if morgen:
+                        await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Morgen fällt kein Unterricht aus."))
+                    else:
+                        await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=_("Heute fällt kein Unterricht aus."))
 
 @restricted
 async def Klausur_Hinzufuegen(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -398,11 +401,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     elif query.data == "send: entfall_heute":
-        await entfallCheck(context, eigenerplan="ja", morgen=False)
+        try:
+            await entfallCheck(context, eigenerplan="ja", morgen=False)
+        except Exception as e:
+            await query.message.reply_text(f"Fehler: {str(e)}")
         return ConversationHandler.END
     
     elif query.data == "send: entfall_morgen":
-        await entfallCheck(context, eigenerplan="ja", morgen=True)
+        try:
+            await entfallCheck(context, eigenerplan="ja", morgen=True)
+        except Exception as e:
+            await query.message.reply_text(f"Fehler: {str(e)}")
         return ConversationHandler.END
 
     return ConversationHandler.END
