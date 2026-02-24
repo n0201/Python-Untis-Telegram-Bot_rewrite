@@ -510,23 +510,21 @@ if __name__ == '__main__':
     application.add_handler(start_handler)
 
     if UNTIS_ENABLED == "true": 
-        test_handler = CommandHandler('test', manuell_test)
-        application.add_handler(test_handler)
-
         application.job_queue.run_repeating(entfallCheck, interval=900, first=0)
-
-    test_conv_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler('test', manuell_test),
-        ],
-        states={
-            WAITING_FOR_CHOICE: [
-                CallbackQueryHandler(button_callback)
+        
+        test_conv_handler = ConversationHandler(
+            entry_points=[
+                CommandHandler('test', manuell_test),
             ],
-        },
-        fallbacks=[],
-        per_user=True,
-    )
+            states={
+                WAITING_FOR_CHOICE: [
+                    CallbackQueryHandler(button_callback)
+                ],
+            },
+            fallbacks=[],
+            per_user=True,
+        )
+        application.add_handler(test_conv_handler)
 
     conv_handler = ConversationHandler(
     entry_points=[
@@ -547,8 +545,6 @@ if __name__ == '__main__':
     per_user=True,
     )
 
-    if UNTIS_ENABLED == "true":
-        application.add_handler(test_conv_handler)
     application.add_handler(conv_handler)
 
     application.run_polling()
