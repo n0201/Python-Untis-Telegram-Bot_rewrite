@@ -13,6 +13,9 @@ msgstr "The classes are cancelled for the following subjects:\n\n"
 msgid "Heute fällt kein Unterricht aus."
 msgstr "No classes cancelled today."
 
+msgid "Morgen fällt kein Unterricht aus."
+msgstr "No classes cancelled tomorrow."
+
 msgid "Format falsch. 4 Zeilen erwartet."
 msgstr "Format incorrect. 4 lines expected."
 
